@@ -1,0 +1,16 @@
+# Override defaults for local development
+micronaut:
+  server:
+    cors:
+      enabled: true
+      configurations:
+        frontend:
+          allowed-origins:
+            - http://localhost:8080
+
+datasources:
+  default:
+    url: jdbc:sqlserver://localhost:1433;databaseName=kpnquest;encrypt=false
+    username: sa
+    password: ${SA_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver

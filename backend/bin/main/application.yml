@@ -1,0 +1,50 @@
+micronaut:
+  application:
+    name: kpn-quest
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+  server:
+    port: 8081
+  executors:
+    io:
+      type: cached
+  security:
+    enabled: true
+    intercept-url-map:
+      - pattern: /swagger-ui/**
+        access: isAnonymous()
+      - pattern: /swagger/**
+        access: isAnonymous()
+      - pattern: /docs/**
+        access: isAnonymous()
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_SECRET}
+              jws-algorithm: HS256
+
+datasources:
+  default:
+    url: jdbc:sqlserver://localhost:1433;databaseName=kpnquest;encrypt=false
+    username: sa
+    password: ${SA_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+flyway:
+  enabled: true
+  baseline-on-migrate: true
+  validate-on-migrate: false
+  placeholders:
+    flyway: test
+  datasources:
+    default:
+      locations:
+        - classpath:db/migration
