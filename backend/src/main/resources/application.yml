@@ -9,6 +9,9 @@ micronaut:
       swagger-ui:
         paths: classpath:META-INF/swagger/views/swagger-ui
         mapping: /swagger-ui/**
+      frontend:
+        paths: classpath:public
+        mapping: /**
   server:
     port: 8081
   executors:
@@ -17,6 +20,8 @@ micronaut:
   security:
     enabled: true
     intercept-url-map:
+      - pattern: /**
+        access: isAnonymous()
       - pattern: /swagger-ui/**
         access: isAnonymous()
       - pattern: /swagger/**

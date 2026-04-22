@@ -5,6 +5,12 @@ plugins {
 version = '0.1'
 group = 'com.kpnquest'
 
+def frontendDir = file("../frontend")
+
+def npmExec = providers.exec {
+    commandLine 'bash', '-lc', 'which npm'
+}.standardOutput.asText.get().trim()
+
 repositories {
     mavenCentral()
 }
@@ -28,7 +34,7 @@ dependencies {
     implementation 'jakarta.validation:jakarta.validation-api'
 
     runtimeOnly 'ch.qos.logback:logback-classic'
-    runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11'
+    runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc:13.4.0.jre11'
     runtimeOnly 'org.flywaydb:flyway-sqlserver'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -50,6 +56,60 @@ dependencies {
 
 application {
     mainClass = 'com.kpnquest.Application'
+}
+
+tasks.register('npmInstall', Exec) {
+    group = 'frontend'
+    description = 'Install frontend dependencies'
+    workingDir frontendDir
+
+    inputs.files(
+            file("${frontendDir}/package.json"),
+            file("${frontendDir}/package-lock.json")
+    )
+    outputs.dir("${frontendDir}/node_modules")
+
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'npm', 'install'
+    } else {
+        commandLine npmExec, 'install'
+    }
+}
+
+tasks.register('buildFrontend', Exec) {
+    group = 'frontend'
+    description = 'Build the frontend React app'
+    workingDir frontendDir
+    dependsOn 'npmInstall'
+
+    inputs.dir("${frontendDir}/src")
+    inputs.file("${frontendDir}/index.html")
+    inputs.file("${frontendDir}/vite.config.ts")
+    inputs.file("${frontendDir}/tsconfig.json")
+    outputs.dir("${frontendDir}/dist")
+
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'npm', 'run', 'build'
+    } else {
+        commandLine npmExec, 'run', 'build'
+    }
+}
+
+tasks.register('cleanFrontend', Delete) {
+    group = 'frontend'
+    description = 'Clean frontend build artifacts'
+    delete "${frontendDir}/dist"
+}
+
+tasks.named('clean') {
+    dependsOn 'cleanFrontend'
+}
+
+tasks.named('processResources', ProcessResources) {
+    dependsOn 'buildFrontend'
+    from("${frontendDir}/dist") {
+        into 'public'
+    }
 }
 
 tasks.register('runWithVars', JavaExec) {
