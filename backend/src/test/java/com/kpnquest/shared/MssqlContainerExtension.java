@@ -1,26 +1,17 @@
 package com.kpnquest.shared;
 
+import org.flywaydb.core.Flyway;
 import org.testcontainers.containers.MSSQLServerContainer;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.Map;
 
 public class MssqlContainerExtension {
-
-    private static final String[] MIGRATION_FILES = {
-        "db/migration/V1__create_players_table.sql",
-        "db/migration/V2__create_missions_table.sql",
-        "db/migration/V3__seed_missions.sql",
-        "db/migration/V4__create_mission_completions_table.sql",
-        "db/migration/V5__create_photos_table.sql",
-        "db/migration/V6__create_game_states_table.sql"
-    };
 
     public static final MSSQLServerContainer<?> CONTAINER =
         new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server:2022-latest")
@@ -40,7 +31,8 @@ public class MssqlContainerExtension {
     }
 
     private static void createDatabase() {
-        try (Connection conn = DriverManager.getConnection(CONTAINER.getJdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword());
+        try (Connection conn = DriverManager.getConnection(
+                CONTAINER.getJdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword());
              Statement stmt = conn.createStatement()) {
             stmt.execute("IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'kpnquest') CREATE DATABASE kpnquest");
         } catch (Exception e) {
@@ -49,26 +41,39 @@ public class MssqlContainerExtension {
     }
 
     private static void runMigrations() {
-        try (Connection conn = DriverManager.getConnection(jdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword())) {
-            // Skip if already migrated (container reuse)
-            try (Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(
-                     "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = 'kpnquest' AND TABLE_NAME = 'players'")) {
-                rs.next();
-                if (rs.getInt(1) > 0) return;
-            }
+        Flyway.configure()
+            .dataSource(jdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword())
+            .locations("classpath:db/migration")
+            .baselineOnMigrate(true)
+            .load()
+            .migrate();
+    }
 
-            for (String file : MIGRATION_FILES) {
-                try (InputStream stream = MssqlContainerExtension.class.getClassLoader().getResourceAsStream(file)) {
-                    if (stream == null) throw new RuntimeException("Migration file not found: " + file);
-                    String sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                    try (Statement stmt = conn.createStatement()) {
-                        stmt.execute(sql);
-                    }
+    /**
+     * Creates a test player by username and returns their generated ID.
+     * If the player already exists, returns their existing ID.
+     */
+    public static long createTestPlayer(String username) {
+        try (Connection conn = DriverManager.getConnection(jdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword())) {
+            // Check if already exists
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT id FROM players WHERE username = ?")) {
+                ps.setString(1, username);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) return rs.getLong(1);
+                }
+            }
+            // Insert new player
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO players (username, is_admin, created_at, updated_at) VALUES (?, 0, GETDATE(), GETDATE()); SELECT SCOPE_IDENTITY()")) {
+                ps.setString(1, username);
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                    return rs.getLong(1);
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to run migrations", e);
+            throw new RuntimeException("Failed to create test player: " + username, e);
         }
     }
 
@@ -81,7 +86,7 @@ public class MssqlContainerExtension {
         );
     }
 
-    private static String jdbcUrl() {
+    protected static String jdbcUrl() {
         return "jdbc:sqlserver://" + CONTAINER.getHost() + ":" + CONTAINER.getMappedPort(1433)
             + ";databaseName=kpnquest;encrypt=false;trustServerCertificate=true";
     }

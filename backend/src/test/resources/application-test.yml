@@ -1,5 +1,4 @@
 # Datasource properties are injected dynamically via TestPropertyProvider.
-# Security JWT secret for tests — not used in production.
 micronaut:
   security:
     token:
@@ -11,3 +10,12 @@ micronaut:
 
 flyway:
   enabled: false
+
+azure:
+  storage:
+    connection-string: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OGLjX+N6proVRHQP+ik6V3NZP1rTbMPANtJ10FJz/QzGNnl0MJzaAQ==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
+    container-name: "photos"
+  vision:
+    endpoint: "https://stub-vision.cognitiveservices.azure.com/"
+    api-key: "stub-api-key-for-tests"
+    confidence-threshold: 0.6

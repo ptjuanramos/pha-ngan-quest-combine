@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @JdbcRepository(dialect = Dialect.SQL_SERVER)
 public interface PlayerRepository extends CrudRepository<Player, Long> {
-    Optional<Player> findByDeviceToken(String deviceToken);
+    Optional<Player> findByUsername(String username);
 }

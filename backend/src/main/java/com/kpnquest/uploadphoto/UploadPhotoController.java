@@ -27,6 +27,6 @@ public class UploadPhotoController {
         Authentication authentication
     ) {
         Long playerId = Long.valueOf(authentication.getName());
-        return ApiResponse.ok(service.upload(playerId, missionId, request.dataUrl()));
+        return ApiResponse.ok(service.upload(playerId, missionId, request.base64Content()));
     }
 }

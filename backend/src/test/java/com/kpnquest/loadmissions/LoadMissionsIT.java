@@ -6,6 +6,7 @@ import com.kpnquest.shared.MssqlContainerExtension;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
+import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.test.support.TestPropertyProvider;
 import jakarta.inject.Inject;
@@ -14,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -35,7 +35,8 @@ class LoadMissionsIT extends MssqlContainerExtension implements TestPropertyProv
 
     @BeforeAll
     void authenticate() throws Exception {
-        var body = Map.of("deviceToken", UUID.randomUUID().toString());
+        createTestPlayer("load-missions-user");
+        var body = Map.of("username", "load-missions-user");
         String json = client.toBlocking().retrieve(HttpRequest.POST("/api/v1/players/identify", body));
         jwt = objectMapper.readTree(json).path("data").path("token").asText();
     }
@@ -69,7 +70,7 @@ class LoadMissionsIT extends MssqlContainerExtension implements TestPropertyProv
     void loadMissions_withoutToken_returns401() {
         var ex = catchThrowableOfType(
             () -> client.toBlocking().retrieve(HttpRequest.GET("/api/v1/missions")),
-            io.micronaut.http.client.exceptions.HttpClientResponseException.class
+            HttpClientResponseException.class
         );
         assertThat(ex.getStatus().getCode()).isEqualTo(401);
     }

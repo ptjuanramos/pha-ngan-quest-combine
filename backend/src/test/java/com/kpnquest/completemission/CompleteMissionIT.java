@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -36,7 +35,8 @@ class CompleteMissionIT extends MssqlContainerExtension implements TestPropertyP
 
     @BeforeAll
     void authenticate() throws Exception {
-        var body = Map.of("deviceToken", UUID.randomUUID().toString());
+        createTestPlayer("complete-mission-user");
+        var body = Map.of("username", "complete-mission-user");
         String json = client.toBlocking().retrieve(HttpRequest.POST("/api/v1/players/identify", body));
         jwt = objectMapper.readTree(json).path("data").path("token").asText();
     }
@@ -57,21 +57,31 @@ class CompleteMissionIT extends MssqlContainerExtension implements TestPropertyP
 
     @Test
     void completeMission_alreadyCompleted_returns409() throws Exception {
-        // Use a fresh player so the mission is not already completed
-        var identifyBody = Map.of("deviceToken", UUID.randomUUID().toString());
+        createTestPlayer("complete-mission-duplicate-user");
+        var identifyBody = Map.of("username", "complete-mission-duplicate-user");
         String identifyJson = client.toBlocking().retrieve(HttpRequest.POST("/api/v1/players/identify", identifyBody));
         String freshJwt = objectMapper.readTree(identifyJson).path("data").path("token").asText();
 
         var body = Map.of("photoId", 1);
         var request = HttpRequest.POST("/api/v1/missions/2/complete", body).bearerAuth(freshJwt);
-
         client.toBlocking().retrieve(request);
 
         var ex = catchThrowableOfType(
-            () -> client.toBlocking().retrieve(HttpRequest.POST("/api/v1/missions/2/complete", body).bearerAuth(freshJwt)),
+            () -> client.toBlocking().retrieve(
+                HttpRequest.POST("/api/v1/missions/2/complete", body).bearerAuth(freshJwt)),
             HttpClientResponseException.class
         );
 
         assertThat(ex.getStatus().getCode()).isEqualTo(409);
+    }
+
+    @Test
+    void completeMission_withoutToken_returns401() {
+        var ex = catchThrowableOfType(
+            () -> client.toBlocking().retrieve(
+                HttpRequest.POST("/api/v1/missions/3/complete", Map.of("photoId", 1))),
+            HttpClientResponseException.class
+        );
+        assertThat(ex.getStatus().getCode()).isEqualTo(401);
     }
 }

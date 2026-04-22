@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @MappedEntity("players")
 public record Player(
     @Id @GeneratedValue Long id,
-    @MappedProperty("device_token") String deviceToken,
+    @MappedProperty("username") String username,
+    @MappedProperty("is_admin") boolean isAdmin,
     @MappedProperty("created_at") LocalDateTime createdAt,
     @MappedProperty("updated_at") LocalDateTime updatedAt
 ) {}

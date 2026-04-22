@@ -1,3 +1,6 @@
 package com.kpnquest.uploadphoto;
 
-public record UploadPhotoResponse(Long photoId, int missionId) {}
+import io.micronaut.core.annotation.Introspected;
+
+@Introspected
+public record UploadPhotoResponse(Long photoId, int missionId, String blobUrl, String validationStatus) {}
