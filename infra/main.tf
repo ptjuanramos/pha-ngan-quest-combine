@@ -113,7 +113,7 @@ resource "azurerm_linux_web_app" "main" {
 
     # Azure Storage
     "AZURE_STORAGE_CONNECTION_STRING" = azurerm_storage_account.main.primary_connection_string
-    "AZURE_STORAGE_CORS_ORIGIN"       = "https://${azurerm_linux_web_app.main.default_hostname}"
+    "AZURE_STORAGE_CORS_ORIGIN"       = "https://app-kpnquest-${random_string.suffix.result}.azurewebsites.net"
 
     # Azure AI Vision
     "AZURE_VISION_ENDPOINT" = azurerm_cognitive_account.vision.endpoint
