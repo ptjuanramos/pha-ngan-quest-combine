@@ -1,4 +1,3 @@
-# ─── Random suffix ────────────────────────────────────────────────────────────
 # Storage account and SQL Server names must be globally unique.
 resource "random_string" "suffix" {
   length  = 6
@@ -7,7 +6,6 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  # Storage account names: 3–24 chars, lowercase alphanumeric only.
   storage_account_name = "stkpnquest${random_string.suffix.result}"
   sql_server_name      = "sql-kpnquest-${random_string.suffix.result}"
   tags = {
@@ -16,20 +14,18 @@ locals {
   }
 }
 
-# ─── Resource Group ───────────────────────────────────────────────────────────
 resource "azurerm_resource_group" "main" {
   name     = "rg-kpnquest"
   location = var.location
   tags     = local.tags
 }
 
-# ─── Storage Account ──────────────────────────────────────────────────────────
 resource "azurerm_storage_account" "main" {
   name                     = local.storage_account_name
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
-  account_replication_type = "LRS" # cheapest redundancy
+  account_replication_type = "LRS"   # cheapest redundancy
   account_kind             = "StorageV2"
   access_tier              = "Hot"
   tags                     = local.tags
@@ -47,7 +43,6 @@ resource "azurerm_storage_container" "tfstate" {
   container_access_type = "private"
 }
 
-# ─── SQL Server + Database ────────────────────────────────────────────────────
 resource "azurerm_mssql_server" "main" {
   name                         = local.sql_server_name
   resource_group_name          = azurerm_resource_group.main.name
@@ -58,7 +53,6 @@ resource "azurerm_mssql_server" "main" {
   tags                         = local.tags
 }
 
-# Allow all Azure-hosted services (e.g. App Service) to reach the SQL server.
 resource "azurerm_mssql_firewall_rule" "azure_services" {
   name             = "AllowAzureServices"
   server_id        = azurerm_mssql_server.main.id
@@ -71,32 +65,29 @@ resource "azurerm_mssql_database" "main" {
   server_id    = azurerm_mssql_server.main.id
   collation    = "SQL_Latin1_General_CP1_CI_AS"
   license_type = "LicenseIncluded"
-  sku_name     = "Basic" # 5 DTUs, 2 GB — cheapest tier (~$5/month)
+  sku_name     = "Basic"   # 5 DTUs, 2 GB — cheapest tier (~$5/month)
   max_size_gb  = 2
   tags         = local.tags
 }
 
-# ─── Azure AI Vision (Computer Vision) ───────────────────────────────────────
 resource "azurerm_cognitive_account" "vision" {
   name                = "cv-kpnquest-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   kind                = "ComputerVision"
-  sku_name            = var.vision_sku # F0 = free / S1 = pay-per-use
+  sku_name            = var.vision_sku   # F0 = free / S1 = pay-per-use
   tags                = local.tags
 }
 
-# ─── App Service Plan ─────────────────────────────────────────────────────────
 resource "azurerm_service_plan" "main" {
   name                = "asp-kpnquest"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
-  sku_name            = var.app_service_sku # B1 = ~$13/month
+  sku_name            = var.app_service_sku   # B1 = ~$13/month
   tags                = local.tags
 }
 
-# ─── App Service ──────────────────────────────────────────────────────────────
 resource "azurerm_linux_web_app" "main" {
   name                = "app-kpnquest-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
@@ -115,27 +106,26 @@ resource "azurerm_linux_web_app" "main" {
   }
 
   app_settings = {
-    # Micronaut datasource — overrides application.yml via env var property source
-    "DATASOURCES_DEFAULT_URL"      = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
-    "DATASOURCES_DEFAULT_USERNAME" = var.sql_admin_username
-    "DATASOURCES_DEFAULT_PASSWORD" = var.sql_admin_password
-    "SA_PASSWORD"                  = var.sql_admin_password
+    "DATASOURCES_DEFAULT_URL"         = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
+    "DATASOURCES_DEFAULT_USERNAME"    = var.sql_admin_username
+    "DATASOURCES_DEFAULT_PASSWORD"    = var.sql_admin_password
+    "SA_PASSWORD"                     = var.sql_admin_password
 
     # Azure Storage
     "AZURE_STORAGE_CONNECTION_STRING" = azurerm_storage_account.main.primary_connection_string
     "AZURE_STORAGE_CORS_ORIGIN"       = "https://${azurerm_linux_web_app.main.default_hostname}"
 
     # Azure AI Vision
-    "AZURE_VISION_ENDPOINT" = azurerm_cognitive_account.vision.endpoint
-    "AZURE_VISION_API_KEY"  = azurerm_cognitive_account.vision.primary_access_key
+    "AZURE_VISION_ENDPOINT"           = azurerm_cognitive_account.vision.endpoint
+    "AZURE_VISION_API_KEY"            = azurerm_cognitive_account.vision.primary_access_key
 
     # JWT
-    "JWT_SECRET" = var.jwt_secret
+    "JWT_SECRET"                      = var.jwt_secret
 
     # Tell App Service which port Micronaut's Netty listens on
-    "WEBSITES_PORT" = "8081"
+    "WEBSITES_PORT"                   = "8081"
 
     # Activate Micronaut prod environment
-    "MICRONAUT_ENVIRONMENTS" = "prod"
+    "MICRONAUT_ENVIRONMENTS"          = "prod"
   }
 }
