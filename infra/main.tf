@@ -1,4 +1,3 @@
-# ─── Random suffix ────────────────────────────────────────────────────────────
 # Storage account and SQL Server names must be globally unique.
 resource "random_string" "suffix" {
   length  = 6
@@ -7,7 +6,6 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  # Storage account names: 3–24 chars, lowercase alphanumeric only.
   storage_account_name = "stkpnquest${random_string.suffix.result}"
   sql_server_name      = "sql-kpnquest-${random_string.suffix.result}"
   tags = {
@@ -16,14 +14,12 @@ locals {
   }
 }
 
-# ─── Resource Group ───────────────────────────────────────────────────────────
 resource "azurerm_resource_group" "main" {
   name     = "rg-kpnquest"
   location = var.location
   tags     = local.tags
 }
 
-# ─── Storage Account ──────────────────────────────────────────────────────────
 resource "azurerm_storage_account" "main" {
   name                     = local.storage_account_name
   resource_group_name      = azurerm_resource_group.main.name
@@ -47,7 +43,6 @@ resource "azurerm_storage_container" "tfstate" {
   container_access_type = "private"
 }
 
-# ─── SQL Server + Database ────────────────────────────────────────────────────
 resource "azurerm_mssql_server" "main" {
   name                         = local.sql_server_name
   resource_group_name          = azurerm_resource_group.main.name
@@ -58,7 +53,6 @@ resource "azurerm_mssql_server" "main" {
   tags                         = local.tags
 }
 
-# Allow all Azure-hosted services (e.g. App Service) to reach the SQL server.
 resource "azurerm_mssql_firewall_rule" "azure_services" {
   name             = "AllowAzureServices"
   server_id        = azurerm_mssql_server.main.id
@@ -76,7 +70,6 @@ resource "azurerm_mssql_database" "main" {
   tags         = local.tags
 }
 
-# ─── Azure AI Vision (Computer Vision) ───────────────────────────────────────
 resource "azurerm_cognitive_account" "vision" {
   name                = "cv-kpnquest-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
@@ -86,7 +79,6 @@ resource "azurerm_cognitive_account" "vision" {
   tags                = local.tags
 }
 
-# ─── App Service Plan ─────────────────────────────────────────────────────────
 resource "azurerm_service_plan" "main" {
   name                = "asp-kpnquest"
   resource_group_name = azurerm_resource_group.main.name
@@ -96,7 +88,6 @@ resource "azurerm_service_plan" "main" {
   tags                = local.tags
 }
 
-# ─── App Service ──────────────────────────────────────────────────────────────
 resource "azurerm_linux_web_app" "main" {
   name                = "app-kpnquest-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
@@ -115,7 +106,6 @@ resource "azurerm_linux_web_app" "main" {
   }
 
   app_settings = {
-    # Micronaut datasource — overrides application.yml via env var property source
     "DATASOURCES_DEFAULT_URL"         = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
     "DATASOURCES_DEFAULT_USERNAME"    = var.sql_admin_username
     "DATASOURCES_DEFAULT_PASSWORD"    = var.sql_admin_password
