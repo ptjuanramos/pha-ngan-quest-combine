@@ -25,7 +25,7 @@ resource "azurerm_storage_account" "main" {
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
-  account_replication_type = "LRS"   # cheapest redundancy
+  account_replication_type = "LRS" # cheapest redundancy
   account_kind             = "StorageV2"
   access_tier              = "Hot"
   tags                     = local.tags
@@ -65,7 +65,7 @@ resource "azurerm_mssql_database" "main" {
   server_id    = azurerm_mssql_server.main.id
   collation    = "SQL_Latin1_General_CP1_CI_AS"
   license_type = "LicenseIncluded"
-  sku_name     = "Basic"   # 5 DTUs, 2 GB — cheapest tier (~$5/month)
+  sku_name     = "Basic" # 5 DTUs, 2 GB — cheapest tier (~$5/month)
   max_size_gb  = 2
   tags         = local.tags
 }
@@ -75,7 +75,7 @@ resource "azurerm_cognitive_account" "vision" {
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   kind                = "ComputerVision"
-  sku_name            = var.vision_sku   # F0 = free / S1 = pay-per-use
+  sku_name            = var.vision_sku # F0 = free / S1 = pay-per-use
   tags                = local.tags
 }
 
@@ -84,7 +84,7 @@ resource "azurerm_service_plan" "main" {
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
-  sku_name            = var.app_service_sku   # B1 = ~$13/month
+  sku_name            = var.app_service_sku # B1 = ~$13/month
   tags                = local.tags
 }
 
@@ -106,26 +106,26 @@ resource "azurerm_linux_web_app" "main" {
   }
 
   app_settings = {
-    "DATASOURCES_DEFAULT_URL"         = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
-    "DATASOURCES_DEFAULT_USERNAME"    = var.sql_admin_username
-    "DATASOURCES_DEFAULT_PASSWORD"    = var.sql_admin_password
-    "SA_PASSWORD"                     = var.sql_admin_password
+    "DATASOURCES_DEFAULT_URL"      = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
+    "DATASOURCES_DEFAULT_USERNAME" = var.sql_admin_username
+    "DATASOURCES_DEFAULT_PASSWORD" = var.sql_admin_password
+    "SA_PASSWORD"                  = var.sql_admin_password
 
     # Azure Storage
     "AZURE_STORAGE_CONNECTION_STRING" = azurerm_storage_account.main.primary_connection_string
     "AZURE_STORAGE_CORS_ORIGIN"       = "https://${azurerm_linux_web_app.main.default_hostname}"
 
     # Azure AI Vision
-    "AZURE_VISION_ENDPOINT"           = azurerm_cognitive_account.vision.endpoint
-    "AZURE_VISION_API_KEY"            = azurerm_cognitive_account.vision.primary_access_key
+    "AZURE_VISION_ENDPOINT" = azurerm_cognitive_account.vision.endpoint
+    "AZURE_VISION_API_KEY"  = azurerm_cognitive_account.vision.primary_access_key
 
     # JWT
-    "JWT_SECRET"                      = var.jwt_secret
+    "JWT_SECRET" = var.jwt_secret
 
     # Tell App Service which port Micronaut's Netty listens on
-    "WEBSITES_PORT"                   = "8081"
+    "WEBSITES_PORT" = "8081"
 
     # Activate Micronaut prod environment
-    "MICRONAUT_ENVIRONMENTS"          = "prod"
+    "MICRONAUT_ENVIRONMENTS" = "prod"
   }
 }
