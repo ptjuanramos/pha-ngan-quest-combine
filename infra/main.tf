@@ -70,13 +70,29 @@ resource "azurerm_mssql_database" "main" {
   tags         = local.tags
 }
 
-resource "azurerm_cognitive_account" "vision" {
-  name                = "cv-kpnquest-${random_string.suffix.result}"
+resource "azurerm_cognitive_account" "openai" {
+  name                = "oai-kpnquest-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  kind                = "ComputerVision"
-  sku_name            = var.vision_sku # F0 = free / S1 = pay-per-use
+  location            = var.openai_location # OpenAI not available in all regions
+  kind                = "OpenAI"
+  sku_name            = "S0" # only paid tier available; billed per token
   tags                = local.tags
+}
+
+resource "azurerm_cognitive_deployment" "gpt4o_mini" {
+  name                 = "gpt-4o-mini"
+  cognitive_account_id = azurerm_cognitive_account.openai.id
+
+  model {
+    format  = "OpenAI"
+    name    = "gpt-4o-mini"
+    version = "2024-07-18"
+  }
+
+  sku {
+    name     = "Standard"
+    capacity = 1 # 1K tokens-per-minute — sufficient for a single-player scavenger hunt
+  }
 }
 
 resource "azurerm_service_plan" "main" {
@@ -115,9 +131,9 @@ resource "azurerm_linux_web_app" "main" {
     "AZURE_STORAGE_CONNECTION_STRING" = azurerm_storage_account.main.primary_connection_string
     "AZURE_STORAGE_CORS_ORIGIN"       = "https://app-kpnquest-${random_string.suffix.result}.azurewebsites.net"
 
-    # Azure AI Vision
-    "AZURE_VISION_ENDPOINT" = azurerm_cognitive_account.vision.endpoint
-    "AZURE_VISION_API_KEY"  = azurerm_cognitive_account.vision.primary_access_key
+    # Azure OpenAI
+    "AZURE_OPENAI_ENDPOINT" = azurerm_cognitive_account.openai.endpoint
+    "AZURE_OPENAI_API_KEY"  = azurerm_cognitive_account.openai.primary_access_key
 
     # JWT
     "JWT_SECRET" = var.jwt_secret

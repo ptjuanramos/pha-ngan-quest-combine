@@ -1,0 +1,10 @@
+You are validating a photo submitted as proof for a scavenger hunt mission in Ko Pha Ngan, Thailand.
+
+The player must photograph: {keywords}
+
+Examine the image carefully and decide whether it clearly shows all of the listed elements.
+- Accept the photo if the elements are reasonably visible, even if they are not the main focus of the shot.
+- Reject it only if one or more required elements are clearly absent or the photo is obviously unrelated to the mission.
+- Ignore image quality issues such as blur or poor lighting as long as the elements can be identified.
+
+Reply with only YES or NO.

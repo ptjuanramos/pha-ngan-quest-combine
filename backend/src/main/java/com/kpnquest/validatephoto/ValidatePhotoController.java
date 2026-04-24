@@ -24,8 +24,6 @@ public class ValidatePhotoController {
         @PathVariable Integer missionId,
         @Valid @Body ValidatePhotoRequest request
     ) {
-
-        return ApiResponse.ok(ValidatePhotoResponse.okResponse());
-        //return ApiResponse.ok(service.validate(missionId, request.playerId(), request.photo()));
+        return ApiResponse.ok(service.validate(missionId, request.playerId(), request.photo()));
     }
 }

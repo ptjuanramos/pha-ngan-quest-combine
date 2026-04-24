@@ -40,11 +40,10 @@ azure:
   storage:
     connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
     container-name: photos
-    cors-origin: ${AZURE_STORAGE_CORS_ORIGIN:*}
-  vision:
-    endpoint: ${AZURE_VISION_ENDPOINT}
-    api-key: ${AZURE_VISION_API_KEY}
-    confidence-threshold: 0.6
+  openai:
+    endpoint: ${AZURE_OPENAI_ENDPOINT}
+    api-key: ${AZURE_OPENAI_API_KEY}
+    deployment-name: gpt-4o-mini
 
 datasources:
   default:

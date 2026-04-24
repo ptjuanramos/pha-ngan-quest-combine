@@ -1,46 +1,40 @@
 package com.kpnquest.shared.ai;
 
-import com.azure.ai.vision.imageanalysis.ImageAnalysisClient;
-import com.azure.ai.vision.imageanalysis.ImageAnalysisClientBuilder;
-import com.azure.ai.vision.imageanalysis.models.DetectedTag;
-import com.azure.ai.vision.imageanalysis.models.ImageAnalysisOptions;
-import com.azure.ai.vision.imageanalysis.models.ImageAnalysisResult;
-import com.azure.ai.vision.imageanalysis.models.VisualFeatures;
+import com.azure.ai.openai.OpenAIClient;
+import com.azure.ai.openai.OpenAIClientBuilder;
+import com.azure.ai.openai.models.ChatCompletionsOptions;
+import com.azure.ai.openai.models.ChatMessageContentItem;
+import com.azure.ai.openai.models.ChatMessageImageContentItem;
+import com.azure.ai.openai.models.ChatMessageImageUrl;
+import com.azure.ai.openai.models.ChatMessageTextContentItem;
+import com.azure.ai.openai.models.ChatRequestUserMessage;
 import com.azure.core.credential.AzureKeyCredential;
-import com.azure.core.util.BinaryData;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Singleton
 public class AiPhotoValidationService {
 
-    private final ImageAnalysisClient client;
-    private final double confidenceThreshold;
+    private final OpenAIClient client;
+    private final String deploymentName;
+    private final PhotoValidationPrompt prompt;
 
     public AiPhotoValidationService(
-        @Value("${azure.vision.endpoint}") String endpoint,
-        @Value("${azure.vision.api-key}") String apiKey,
-        @Value("${azure.vision.confidence-threshold:0.6}") double confidenceThreshold
+        @Value("${azure.openai.endpoint}") String endpoint,
+        @Value("${azure.openai.api-key}") String apiKey,
+        @Value("${azure.openai.deployment-name:gpt-4o-mini}") String deploymentName,
+        PhotoValidationPrompt prompt
     ) {
-        this.client = new ImageAnalysisClientBuilder()
+        this.client = new OpenAIClientBuilder()
             .endpoint(endpoint)
             .credential(new AzureKeyCredential(apiKey))
             .buildClient();
-        this.confidenceThreshold = confidenceThreshold;
+        this.deploymentName = deploymentName;
+        this.prompt = prompt;
     }
 
-    /**
-     * Validate a photo against the expected keywords for a mission.
-     *
-     * @param base64Content  raw base64 (with or without data URL prefix)
-     * @param keywordsCsv    comma-separated expected tags, e.g. "beach,ocean,person"
-     */
     public ValidationResult validate(String base64Content, String keywordsCsv) {
         if (keywordsCsv == null || keywordsCsv.isBlank()) {
             return new ValidationResult(false, "No validation keywords configured for this mission");
@@ -48,33 +42,23 @@ public class AiPhotoValidationService {
 
         try {
             String base64 = base64Content.contains(",") ? base64Content.split(",")[1] : base64Content;
-            byte[] bytes = Base64.getDecoder().decode(base64);
+            String dataUrl = "data:image/jpeg;base64," + base64;
 
-            ImageAnalysisResult result = client.analyze(
-                BinaryData.fromBytes(bytes),
-                List.of(VisualFeatures.TAGS),
-                new ImageAnalysisOptions().setLanguage("en")
+            List<ChatMessageContentItem> content = List.of(
+                new ChatMessageTextContentItem(prompt.build(keywordsCsv)),
+                new ChatMessageImageContentItem(new ChatMessageImageUrl(dataUrl))
             );
 
-            Set<String> detectedTags = result.getTags().getValues().stream()
-                .filter(tag -> tag.getConfidence() >= confidenceThreshold)
-                .map(DetectedTag::getName)
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
+            String answer = client.getChatCompletions(
+                deploymentName,
+                new ChatCompletionsOptions(List.of(new ChatRequestUserMessage(content)))
+            ).getChoices().getFirst().getMessage().getContent().trim();
 
-            List<String> expected = Arrays.stream(keywordsCsv.split(","))
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .toList();
+            boolean valid = answer.toUpperCase().startsWith("YES");
 
-            List<String> matched = expected.stream()
-                .filter(detectedTags::contains)
-                .toList();
-
-            boolean valid = !matched.isEmpty();
             String reason = valid
-                ? "Detected expected elements: " + String.join(", ", matched)
-                : "Expected elements not found. Detected: " + String.join(", ", detectedTags);
+                ? "Photo contains all expected elements: " + keywordsCsv
+                : "Photo does not clearly show all expected elements: " + keywordsCsv;
 
             return new ValidationResult(valid, reason);
 

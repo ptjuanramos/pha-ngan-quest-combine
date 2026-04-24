@@ -21,13 +21,13 @@ graph TD
     end
 
     SQL[("Azure SQL Database\nBasic · 5 DTU · 2 GB\nFlyway migrations")]
-    Vision["Azure AI Vision\nComputer Vision\nImage Analysis 4.0\nTag detection"]
+    OpenAI["Azure OpenAI\ngpt-4o-mini\nVision validation"]
 
     Player -->|HTTPS| SPA
     SPA -->|REST /api/v1/**| API
     API -->|JDBC| SQL
     API -->|upload blobs| Photos
-    API -->|tag detection| Vision
+    API -->|vision validation| OpenAI
     TFState -.->|Terraform state| AppService
 ```
 
@@ -41,7 +41,7 @@ graph TD
 | Backend | Micronaut 4.x, Java 21 (virtual threads), Netty |
 | Database | Microsoft SQL Server, Micronaut Data JDBC, Flyway |
 | Storage | Azure Blob Storage (photo uploads) |
-| AI Validation | Azure AI Vision — Image Analysis 4.0 (tag detection) |
+| AI Validation | Azure OpenAI — gpt-4o-mini (vision prompt, yes/no) |
 | Auth | JWT (HS256, 90-day expiry) |
 | Infrastructure | Terraform, Azure App Service |
 | CI/CD | GitHub Actions (OIDC, no stored credentials) |
@@ -94,7 +94,7 @@ All endpoints except `/api/v1/players/identify` require `Authorization: Bearer <
 | GET | `/api/v1/missions` | JWT | List all 8 missions |
 | POST | `/api/v1/missions/{id}/complete` | JWT | Mark mission complete |
 | POST | `/api/v1/missions/{id}/photos` | JWT | Upload proof photo (base64 → blob) |
-| POST | `/api/v1/missions/{id}/photos/validate` | JWT | AI validation via Azure AI Vision |
+| POST | `/api/v1/missions/{id}/photos/validate` | JWT | AI validation via Azure OpenAI gpt-4o-mini |
 | POST | `/api/v1/missions/{id}/photos/{photoId}/approve` | JWT + admin | Manual admin approval |
 | GET | `/api/v1/players/{id}/completions` | JWT | List player's completed missions |
 | GET | `/api/v1/players/{id}/missions/{missionId}/photo` | JWT | Get photo blob URL + status |
@@ -104,7 +104,7 @@ All endpoints except `/api/v1/players/identify` require `Authorization: Bearer <
 | Status | Meaning |
 |---|---|
 | `PENDING` | Photo uploaded, not yet validated |
-| `AI_APPROVED` | Azure AI Vision matched expected tags |
+| `AI_APPROVED` | Azure OpenAI confirmed all expected elements are present |
 | `AI_REJECTED` | AI could not confirm — awaiting admin review |
 | `ADMIN_APPROVED` | Admin manually approved |
 | `ADMIN_REJECTED` | Admin rejected |
@@ -154,8 +154,8 @@ npm run dev
 | `SA_PASSWORD` | SQL Server SA password |
 | `JWT_SECRET` | Secret for signing JWTs (min 32 chars) |
 | `AZURE_STORAGE_CONNECTION_STRING` | Blob storage connection string (use Azurite for local dev) |
-| `AZURE_VISION_ENDPOINT` | Azure AI Vision endpoint URL |
-| `AZURE_VISION_API_KEY` | Azure AI Vision API key |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL |
+| `AZURE_OPENAI_API_KEY` | Azure OpenAI API key |
 
 **Azurite (local blob emulator) connection string:**
 ```

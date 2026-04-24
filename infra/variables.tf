@@ -34,8 +34,8 @@ variable "app_service_sku" {
   default     = "B1"
 }
 
-variable "vision_sku" {
-  description = "Azure AI Vision SKU. F0 = free (5 000 calls/month). S1 = pay-per-use."
+variable "openai_location" {
+  description = "Azure region for the OpenAI account. Must support gpt-4o-mini — may differ from the main location. See https://learn.microsoft.com/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability"
   type        = string
-  default     = "F0"
+  default     = "eastus"
 }

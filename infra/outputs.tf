@@ -13,7 +13,7 @@ output "sql_server_fqdn" {
   value       = azurerm_mssql_server.main.fully_qualified_domain_name
 }
 
-output "vision_endpoint" {
-  description = "Azure AI Vision endpoint."
-  value       = azurerm_cognitive_account.vision.endpoint
+output "openai_endpoint" {
+  description = "Azure OpenAI endpoint."
+  value       = azurerm_cognitive_account.openai.endpoint
 }
