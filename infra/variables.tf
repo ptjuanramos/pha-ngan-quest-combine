@@ -4,9 +4,9 @@ variable "storage_account_name" {
 }
 
 variable "location" {
-  description = "Azure region. Southeast Asia (Singapore) is closest to Ko Pha Ngan."
+  description = "Azure region."
   type        = string
-  default     = "southeastasia"
+  default     = "swedencentral"
 }
 
 variable "environment" {
@@ -42,5 +42,5 @@ variable "app_service_sku" {
 variable "openai_location" {
   description = "Azure region for the OpenAI account. Must support gpt-4o-mini — may differ from the main location. See https://learn.microsoft.com/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability"
   type        = string
-  default     = "eastus"
+  default     = "swedencentral"
 }
