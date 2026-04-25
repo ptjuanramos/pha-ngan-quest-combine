@@ -64,7 +64,7 @@ resource "azurerm_cognitive_deployment" "gpt4o_mini" {
   model {
     format  = "OpenAI"
     name    = "gpt-4o-mini"
-    version = "2025-01-04-preview"
+    version = "2025-01-01-preview"
   }
 
   sku {
