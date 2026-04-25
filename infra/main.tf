@@ -1,52 +1,30 @@
-# Storage account and SQL Server names must be globally unique.
-resource "random_string" "suffix" {
-  length  = 6
-  special = false
-  upper   = false
-}
-
 locals {
-  storage_account_name = "stkpnquest${random_string.suffix.result}"
-  sql_server_name      = "sql-kpnquest-${random_string.suffix.result}"
+  sql_server_name = "sql-kpnquest"
   tags = {
     project     = "kpn-quest"
     environment = var.environment
   }
 }
 
-resource "azurerm_resource_group" "main" {
-  name     = "rg-kpnquest"
-  location = var.location
-  tags     = local.tags
+data "azurerm_resource_group" "main" {
+  name = "rg-kpnquest"
 }
 
-resource "azurerm_storage_account" "main" {
-  name                     = local.storage_account_name
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS" # cheapest redundancy
-  account_kind             = "StorageV2"
-  access_tier              = "Hot"
-  tags                     = local.tags
+data "azurerm_storage_account" "main" {
+  name                = var.storage_account_name
+  resource_group_name = data.azurerm_resource_group.main.name
 }
 
 resource "azurerm_storage_container" "photos" {
   name                  = "photos"
-  storage_account_name  = azurerm_storage_account.main.name
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "tfstate" {
-  name                  = "tfstate"
-  storage_account_name  = azurerm_storage_account.main.name
-  container_access_type = "private"
+  storage_account_name  = data.azurerm_storage_account.main.name
+  container_access_type = "blob"
 }
 
 resource "azurerm_mssql_server" "main" {
   name                         = local.sql_server_name
-  resource_group_name          = azurerm_resource_group.main.name
-  location                     = azurerm_resource_group.main.location
+  resource_group_name          = data.azurerm_resource_group.main.name
+  location                     = data.azurerm_resource_group.main.location
   version                      = "12.0"
   administrator_login          = var.sql_admin_username
   administrator_login_password = var.sql_admin_password
@@ -65,17 +43,17 @@ resource "azurerm_mssql_database" "main" {
   server_id    = azurerm_mssql_server.main.id
   collation    = "SQL_Latin1_General_CP1_CI_AS"
   license_type = "LicenseIncluded"
-  sku_name     = "Basic" # 5 DTUs, 2 GB — cheapest tier (~$5/month)
+  sku_name     = "Basic"
   max_size_gb  = 2
   tags         = local.tags
 }
 
 resource "azurerm_cognitive_account" "openai" {
-  name                = "oai-kpnquest-${random_string.suffix.result}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.openai_location # OpenAI not available in all regions
+  name                = "oai-kpnquest"
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = var.openai_location
   kind                = "OpenAI"
-  sku_name            = "S0" # only paid tier available; billed per token
+  sku_name            = "S0"
   tags                = local.tags
 }
 
@@ -91,23 +69,23 @@ resource "azurerm_cognitive_deployment" "gpt4o_mini" {
 
   sku {
     name     = "Standard"
-    capacity = 1 # 1K tokens-per-minute — sufficient for a single-player scavenger hunt
+    capacity = 1
   }
 }
 
 resource "azurerm_service_plan" "main" {
   name                = "asp-kpnquest"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   os_type             = "Linux"
-  sku_name            = var.app_service_sku # B1 = ~$13/month
+  sku_name            = var.app_service_sku
   tags                = local.tags
 }
 
 resource "azurerm_linux_web_app" "main" {
-  name                = "app-kpnquest-${random_string.suffix.result}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  name                = "app-kpnquest"
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   service_plan_id     = azurerm_service_plan.main.id
   tags                = local.tags
 
@@ -127,21 +105,14 @@ resource "azurerm_linux_web_app" "main" {
     "DATASOURCES_DEFAULT_PASSWORD" = var.sql_admin_password
     "SA_PASSWORD"                  = var.sql_admin_password
 
-    # Azure Storage
-    "AZURE_STORAGE_CONNECTION_STRING" = azurerm_storage_account.main.primary_connection_string
-    "AZURE_STORAGE_CORS_ORIGIN"       = "https://app-kpnquest-${random_string.suffix.result}.azurewebsites.net"
+    "AZURE_STORAGE_CONNECTION_STRING" = data.azurerm_storage_account.main.primary_connection_string
 
-    # Azure OpenAI
     "AZURE_OPENAI_ENDPOINT" = azurerm_cognitive_account.openai.endpoint
     "AZURE_OPENAI_API_KEY"  = azurerm_cognitive_account.openai.primary_access_key
 
-    # JWT
     "JWT_SECRET" = var.jwt_secret
 
-    # Tell App Service which port Micronaut's Netty listens on
-    "WEBSITES_PORT" = "8081"
-
-    # Activate Micronaut prod environment
+    "WEBSITES_PORT"       = "8081"
     "MICRONAUT_ENVIRONMENTS" = "prod"
   }
 }

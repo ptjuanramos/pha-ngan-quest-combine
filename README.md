@@ -188,7 +188,32 @@ Add a federated credential on the app registration:
 - **Issuer:** `https://token.actions.githubusercontent.com`
 - **Subject:** `repo:<org>/<repo>:ref:refs/heads/main`
 
-#### 2. Add GitHub Secrets
+#### 2. Bootstrap the Terraform backend
+
+The resource group and storage account that hold Terraform state are created by a script — not by Terraform itself — to avoid the chicken-and-egg problem of needing state to create the state backend.
+
+```powershell
+cd infra
+./bootstrap.ps1              # defaults to southeastasia
+# or: ./bootstrap.ps1 -Location eastus
+```
+
+The script is idempotent — safe to re-run. It prints the generated `storage_account_name` at the end. Copy it into `backend.tf`.
+
+#### 3. Initialise Terraform
+
+```powershell
+terraform init -var="storage_account_name=<name from bootstrap>"
+```
+
+#### 4. Apply
+
+```powershell
+terraform plan  -var="storage_account_name=<name from bootstrap>"
+terraform apply -var="storage_account_name=<name from bootstrap>"
+```
+
+#### 5. Add GitHub Secrets
 
 | Secret | Value |
 |---|---|
@@ -197,27 +222,8 @@ Add a federated credential on the app registration:
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
 | `TF_VAR_SQL_ADMIN_PASSWORD` | SQL admin password |
 | `TF_VAR_JWT_SECRET` | JWT signing secret |
-| `AZURE_WEBAPP_NAME` | App Service name from Terraform output (`app-kpnquest-<suffix>`) — set after first `terraform apply` |
-
-#### 3. Phase 1 — initial apply (local state)
-
-```bash
-cd infra
-terraform init
-terraform plan
-terraform apply
-# Note the storage_account_name output
-```
-
-#### 4. Phase 2 — migrate state to Azure Blob
-
-Edit `backend.tf`, uncomment the `azurerm` backend block, and fill in the storage account name from the output above. Then:
-
-```bash
-terraform init -migrate-state
-```
-
-From this point on the pipeline manages state automatically.
+| `TF_VAR_STORAGE_ACCOUNT_NAME` | Storage account name from bootstrap |
+| `AZURE_WEBAPP_NAME` | App Service name from Terraform output (`app-kpnquest-<suffix>`) — set after first apply |
 
 ---
 
