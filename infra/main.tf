@@ -18,7 +18,7 @@ data "azurerm_storage_account" "main" {
 resource "azurerm_storage_container" "photos" {
   name                  = "photos"
   storage_account_name  = data.azurerm_storage_account.main.name
-  container_access_type = "blob"
+  container_access_type = "private"
 }
 
 resource "azurerm_mssql_server" "main" {
@@ -64,7 +64,7 @@ resource "azurerm_cognitive_deployment" "gpt4o_mini" {
   model {
     format  = "OpenAI"
     name    = "gpt-4o-mini"
-    version = "2025-01-01-preview"
+    version = "2024-11-05"
   }
 
   sku {
