@@ -112,7 +112,7 @@ resource "azurerm_linux_web_app" "main" {
 
     "JWT_SECRET" = var.jwt_secret
 
-    "WEBSITES_PORT"       = "8081"
+    "WEBSITES_PORT"          = "8081"
     "MICRONAUT_ENVIRONMENTS" = "prod"
   }
 }
