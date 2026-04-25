@@ -1,3 +1,8 @@
+variable "storage_account_name" {
+  description = "Name of the storage account created by bootstrap.ps1. Used as the Terraform state backend and for blob storage."
+  type        = string
+}
+
 variable "location" {
   description = "Azure region. Southeast Asia (Singapore) is closest to Ko Pha Ngan."
   type        = string
