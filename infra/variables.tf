@@ -6,7 +6,7 @@ variable "storage_account_name" {
 variable "location" {
   description = "Azure region."
   type        = string
-  default     = "swedencentral"
+  default     = "westeurope"
 }
 
 variable "environment" {
