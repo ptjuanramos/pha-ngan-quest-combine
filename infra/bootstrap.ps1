@@ -1,5 +1,5 @@
 param(
-    [string]$Location = "swedencentral"
+    [string]$Location = "westeurope"
 )
 
 $ErrorActionPreference = "Stop"
