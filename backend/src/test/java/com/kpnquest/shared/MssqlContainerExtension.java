@@ -13,6 +13,7 @@ import java.util.Map;
 
 public class MssqlContainerExtension {
 
+    //TODO try with resources
     public static final MSSQLServerContainer<?> CONTAINER =
         new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server:2022-latest")
             .acceptLicense()
@@ -45,6 +46,8 @@ public class MssqlContainerExtension {
             .dataSource(jdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword())
             .locations("classpath:db/migration")
             .baselineOnMigrate(true)
+            .cleanDisabled(false)
+            .cleanOnValidationError(true)
             .load()
             .migrate();
     }

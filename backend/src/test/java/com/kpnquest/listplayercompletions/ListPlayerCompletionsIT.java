@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -55,8 +56,9 @@ class ListPlayerCompletionsIT extends MssqlContainerExtension implements TestPro
 
     @Test
     void listCompletions_returnsCompletedMissions() throws Exception {
-        long freshPlayerId = createTestPlayer("list-completions-with-data-user");
-        var identifyBody = Map.of("username", "list-completions-with-data-user");
+        String uniqueUsername = "list-completions-" + UUID.randomUUID();
+        long freshPlayerId = createTestPlayer(uniqueUsername);
+        var identifyBody = Map.of("username", uniqueUsername);
         String identifyJson = client.toBlocking().retrieve(HttpRequest.POST("/api/v1/players/identify", identifyBody));
         String freshJwt = objectMapper.readTree(identifyJson).path("data").path("token").asText();
 

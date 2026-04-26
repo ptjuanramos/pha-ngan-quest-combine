@@ -10,4 +10,5 @@ import java.util.Optional;
 @JdbcRepository(dialect = Dialect.SQL_SERVER)
 public interface PhotoRepository extends GenericRepository<Photo, Long> {
     Optional<Photo> findByPlayerIdAndMissionId(Long playerId, Integer missionId);
+    Photo update(Photo photo);
 }

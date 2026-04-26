@@ -1,3 +1,8 @@
+jackson:
+  serialization-inclusion: always
+  serialization:
+    writeDatesAsTimestamps: false
+
 micronaut:
   application:
     name: kpn-quest

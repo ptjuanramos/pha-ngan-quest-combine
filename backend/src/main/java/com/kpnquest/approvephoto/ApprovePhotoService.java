@@ -30,7 +30,8 @@ public class ApprovePhotoService {
         String newStatus = approved ? "ADMIN_APPROVED" : "ADMIN_REJECTED";
         Photo updated = repository.update(
             new Photo(photo.id(), photo.playerId(), photo.missionId(),
-                photo.blobUrl(), newStatus, photo.createdAt(), LocalDateTime.now())
+                photo.blobPath(), photo.sasToken(), photo.sasExpiresAt(),
+                newStatus, photo.createdAt(), LocalDateTime.now())
         );
 
         return new ApprovePhotoResponse(updated.id(), updated.validationStatus());

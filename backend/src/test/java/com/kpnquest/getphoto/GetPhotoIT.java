@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +31,7 @@ import static org.mockito.Mockito.when;
 class GetPhotoIT extends MssqlContainerExtension implements TestPropertyProvider {
 
     private static final String STUB_BASE64 =
-        "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARC";
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
     private static final String STUB_BLOB_URL = "https://stub.blob.core.windows.net/photos/test.jpg";
 
     @Inject @Client("/") HttpClient client;
@@ -42,7 +43,10 @@ class GetPhotoIT extends MssqlContainerExtension implements TestPropertyProvider
     @MockBean(BlobStorageService.class)
     BlobStorageService blobStorageService() {
         BlobStorageService mock = Mockito.mock(BlobStorageService.class);
-        when(mock.upload(anyString(), any(byte[].class))).thenReturn(STUB_BLOB_URL);
+        when(mock.upload(anyString(), any(byte[].class))).thenReturn("1/1/test.jpg");
+        when(mock.generateSas(anyString())).thenReturn(
+            new BlobStorageService.SasResult("stub-token", LocalDateTime.now().plusDays(30)));
+        when(mock.buildUrl(anyString(), anyString())).thenReturn(STUB_BLOB_URL);
         return mock;
     }
 

@@ -50,7 +50,8 @@ public class ValidatePhotoService {
         photoRepository.findByPlayerIdAndMissionId(playerId, missionId)
             .ifPresent(existing -> photoRepository.update(
                 new Photo(existing.id(), existing.playerId(), existing.missionId(),
-                    existing.blobUrl(), newStatus, existing.createdAt(), LocalDateTime.now())
+                    existing.blobPath(), existing.sasToken(), existing.sasExpiresAt(),
+                    newStatus, existing.createdAt(), LocalDateTime.now())
             ));
 
         return new ValidatePhotoResponse(result.valid(), result.reason());

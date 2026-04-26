@@ -12,7 +12,9 @@ public record Photo(
     @Id @GeneratedValue Long id,
     @MappedProperty("player_id") Long playerId,
     @MappedProperty("mission_id") Integer missionId,
-    @MappedProperty("blob_url") String blobUrl,
+    @MappedProperty("blob_path") String blobPath,
+    @MappedProperty("sas_token") String sasToken,
+    @MappedProperty("sas_expires_at") LocalDateTime sasExpiresAt,
     @MappedProperty("validation_status") String validationStatus,
     @MappedProperty("created_at") LocalDateTime createdAt,
     @MappedProperty("updated_at") LocalDateTime updatedAt

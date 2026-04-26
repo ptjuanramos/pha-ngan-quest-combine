@@ -1,14 +1,16 @@
 package com.kpnquest.shared.storage;
 
-import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.PublicAccessType;
+import com.azure.storage.blob.sas.BlobSasPermission;
+import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 
 import java.io.ByteArrayInputStream;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Singleton
 public class BlobStorageService {
@@ -24,17 +26,26 @@ public class BlobStorageService {
             .buildClient();
 
         this.containerClient = serviceClient.getBlobContainerClient(containerName);
-
-        if (!containerClient.exists()) {
-            containerClient.createWithResponse(null, PublicAccessType.BLOB, null, null);
-        } else {
-            containerClient.setAccessPolicy(PublicAccessType.BLOB, null);
-        }
     }
 
+    public record SasResult(String token, LocalDateTime expiresAt) {}
+
     public String upload(String blobPath, byte[] bytes) {
-        BlobClient blobClient = containerClient.getBlobClient(blobPath);
-        blobClient.upload(new ByteArrayInputStream(bytes), bytes.length, true);
-        return blobClient.getBlobUrl();
+        containerClient.getBlobClient(blobPath)
+            .upload(new ByteArrayInputStream(bytes), bytes.length, true);
+        return blobPath;
+    }
+
+    public SasResult generateSas(String blobPath) {
+        OffsetDateTime expiry = OffsetDateTime.now().plusDays(30);
+        BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
+            expiry, new BlobSasPermission().setReadPermission(true)
+        );
+        String token = containerClient.getBlobClient(blobPath).generateSas(values);
+        return new SasResult(token, expiry.toLocalDateTime());
+    }
+
+    public String buildUrl(String blobPath, String sasToken) {
+        return containerClient.getBlobClient(blobPath).getBlobUrl() + "?" + sasToken;
     }
 }

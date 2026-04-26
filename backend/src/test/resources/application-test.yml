@@ -19,3 +19,6 @@ azure:
     endpoint: "https://stub-vision.cognitiveservices.azure.com/"
     api-key: "stub-api-key-for-tests"
     confidence-threshold: 0.6
+  openai:
+    endpoint: "https://stub-openai.openai.azure.com/"
+    api-key: "stub-openai-api-key"
