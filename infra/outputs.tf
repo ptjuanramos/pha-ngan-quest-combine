@@ -9,6 +9,6 @@ output "sql_server_fqdn" {
 }
 
 output "openai_endpoint" {
-  description = "Azure OpenAI endpoint."
+  description = "Azure OpenAI endpoint ."
   value       = azurerm_cognitive_account.openai.endpoint
 }
