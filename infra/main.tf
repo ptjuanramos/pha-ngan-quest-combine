@@ -76,7 +76,7 @@ resource "azurerm_cognitive_deployment" "gpt4o_mini" {
 resource "azurerm_service_plan" "main" {
   name                = "asp-kpnquest"
   resource_group_name = data.azurerm_resource_group.main.name
-  location            = data.azurerm_resource_group.main.location
+  location            = "switzerlandnorth"
   os_type             = "Linux"
   sku_name            = var.app_service_sku
   tags                = local.tags
@@ -85,7 +85,7 @@ resource "azurerm_service_plan" "main" {
 resource "azurerm_linux_web_app" "main" {
   name                = "app-kpnquest"
   resource_group_name = data.azurerm_resource_group.main.name
-  location            = data.azurerm_resource_group.main.location
+  location            = "switzerlandnorth"
   service_plan_id     = azurerm_service_plan.main.id
   tags                = local.tags
 
