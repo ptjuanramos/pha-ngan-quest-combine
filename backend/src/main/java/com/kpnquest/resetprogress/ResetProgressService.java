@@ -2,6 +2,7 @@ package com.kpnquest.resetprogress;
 
 import com.kpnquest.completemission.CompletionRepository;
 import com.kpnquest.shared.exception.UnauthorizedException;
+import com.kpnquest.shared.storage.BlobStorageService;
 import com.kpnquest.uploadphoto.PhotoRepository;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.transaction.annotation.Transactional;
@@ -12,10 +13,12 @@ public class ResetProgressService {
 
     private final CompletionRepository completionRepository;
     private final PhotoRepository photoRepository;
+    private final BlobStorageService blobStorageService;
 
-    public ResetProgressService(CompletionRepository completionRepository, PhotoRepository photoRepository) {
+    public ResetProgressService(CompletionRepository completionRepository, PhotoRepository photoRepository, BlobStorageService blobStorageService) {
         this.completionRepository = completionRepository;
         this.photoRepository = photoRepository;
+        this.blobStorageService = blobStorageService;
     }
 
     @Transactional
@@ -30,6 +33,7 @@ public class ResetProgressService {
 
         photoRepository.deleteAll();
         completionRepository.deleteAll();
+        blobStorageService.deleteAllContainersFiles();
 
         return new ResetProgressResponse(deletedCompletions, deletedPhotos);
     }

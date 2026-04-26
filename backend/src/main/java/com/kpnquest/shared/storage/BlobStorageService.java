@@ -36,6 +36,12 @@ public class BlobStorageService {
         return blobPath;
     }
 
+    public void deleteAllContainersFiles() {
+         containerClient.listBlobs().forEach(blob ->
+                 containerClient.getBlobClient(blob.getName())
+                         .delete());
+    }
+
     public SasResult generateSas(String blobPath) {
         OffsetDateTime expiry = OffsetDateTime.now().plusDays(30);
         BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
