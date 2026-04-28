@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
-          path: backend/build/libs/*-all.jar
+          path: backend/build/libs/app.jar
           retention-days: 1
 
   deploy:
