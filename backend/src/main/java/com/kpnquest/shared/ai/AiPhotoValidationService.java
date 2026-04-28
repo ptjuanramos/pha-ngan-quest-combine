@@ -17,9 +17,11 @@ import java.util.List;
 @Singleton
 public class AiPhotoValidationService {
 
-    private final OpenAIClient client;
+    private final String endpoint;
+    private final String apiKey;
     private final String deploymentName;
     private final PhotoValidationPrompt prompt;
+    private volatile OpenAIClient client;
 
     public AiPhotoValidationService(
         @Value("${azure.openai.endpoint}") String endpoint,
@@ -27,12 +29,24 @@ public class AiPhotoValidationService {
         @Value("${azure.openai.deployment-name:gpt-4o-mini}") String deploymentName,
         PhotoValidationPrompt prompt
     ) {
-        this.client = new OpenAIClientBuilder()
-            .endpoint(endpoint)
-            .credential(new AzureKeyCredential(apiKey))
-            .buildClient();
+        this.endpoint = endpoint;
+        this.apiKey = apiKey;
         this.deploymentName = deploymentName;
         this.prompt = prompt;
+    }
+
+    private OpenAIClient client() {
+        if (client == null) {
+            synchronized (this) {
+                if (client == null) {
+                    client = new OpenAIClientBuilder()
+                        .endpoint(endpoint)
+                        .credential(new AzureKeyCredential(apiKey))
+                        .buildClient();
+                }
+            }
+        }
+        return client;
     }
 
     public ValidationResult validate(String base64Content, String keywordsCsv) {
@@ -49,7 +63,7 @@ public class AiPhotoValidationService {
                 new ChatMessageImageContentItem(new ChatMessageImageUrl(dataUrl))
             );
 
-            String answer = client.getChatCompletions(
+            String answer = client().getChatCompletions(
                 deploymentName,
                 new ChatCompletionsOptions(List.of(new ChatRequestUserMessage(content)))
             ).getChoices().getFirst().getMessage().getContent().trim();
