@@ -115,3 +115,5 @@ backend/.env
 .classpath
 
 .DS_Store
+
+.errors
