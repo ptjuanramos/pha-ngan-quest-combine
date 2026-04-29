@@ -1,6 +1,6 @@
 output "app_url" {
-  description = "Public URL of the App Service."
-  value       = "https://${azurerm_linux_web_app.main.default_hostname}"
+  description = "Public URL of the Container App."
+  value       = "https://${azurerm_container_app.main.ingress[0].fqdn}"
 }
 
 output "sql_server_fqdn" {
