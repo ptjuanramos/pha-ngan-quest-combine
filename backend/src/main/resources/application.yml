@@ -56,6 +56,8 @@ datasources:
     username: sa
     password: ${SA_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    maximum-pool-size: 3
+    minimum-idle: 1
 
 flyway:
   enabled: true

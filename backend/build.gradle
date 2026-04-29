@@ -162,6 +162,11 @@ tasks.withType(JavaCompile).configureEach {
 
 shadowJar {
     archiveFileName = 'app.jar'
+    mergeServiceFiles()
+}
+
+jar {
+    enabled = false
 }
 
 micronaut {
