@@ -99,6 +99,18 @@ resource "azurerm_linux_web_app" "main" {
     }
   }
 
+  logs {
+    application_logs {
+      file_system_level = "Information"
+    }
+    http_logs {
+      file_system {
+        retention_in_mb   = 35
+        retention_in_days = 7
+      }
+    }
+  }
+
   app_settings = {
     "DATASOURCES_DEFAULT_URL"      = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
     "DATASOURCES_DEFAULT_USERNAME" = var.sql_admin_username
