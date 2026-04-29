@@ -25,7 +25,7 @@ Do NOT introduce:
 ./gradlew runWithVars    # Start backend (port 8080, reads .env for secrets)
 ```
 
-> **Local database:** start MSSQL first with `docker compose up -d` from `local/`.
+> **Local database:** start MSSQL first via `local\dev-db.cmd up -d` (Windows) or `./local/dev-db.sh up -d` (macOS/Linux). Both load `backend/.env` automatically.
 >
 > **Windows first run:** create `~/.testcontainers.properties` with `testcontainers.reuse.enable=true`
 > so the MSSQL container is reused between test runs instead of restarting each time.

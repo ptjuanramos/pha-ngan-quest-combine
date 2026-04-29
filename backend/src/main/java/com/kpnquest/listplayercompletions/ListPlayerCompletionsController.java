@@ -23,4 +23,9 @@ public class ListPlayerCompletionsController {
     public ApiResponse<List<PlayerCompletionResponse>> list(@PathVariable Long playerId) {
         return ApiResponse.ok(service.list(playerId));
     }
+
+    @Get("/missions")
+    public ApiResponse<List<PlayerMissionStatusResponse>> listAllMissions() {
+        return ApiResponse.ok(service.listAllPlayersMissionStatus());
+    }
 }

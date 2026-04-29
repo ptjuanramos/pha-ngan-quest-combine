@@ -8,6 +8,7 @@ import java.util.Optional;
 
 @JdbcRepository(dialect = Dialect.SQL_SERVER)
 public interface CompletionRepository extends CrudRepository<MissionCompletion, Long> {
+
     Optional<MissionCompletion> findByPlayerIdAndMissionId(Long playerId, Integer missionId);
     long countByPlayerId(Long playerId);
 }

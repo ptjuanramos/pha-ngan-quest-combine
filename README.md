@@ -57,17 +57,42 @@ graph TD
 
 ## Local development
 
-**Start the database:**
-```bash
-cd local && docker compose up -d
+### 1. Create `backend/.env`
+
+```env
+SA_PASSWORD=Password123!
+JWT_SECRET=your-secret-at-least-256-bits-long-for-hs256
+AZURE_STORAGE_CONNECTION_STRING=UseDevelopmentStorage=true
+AZURE_OPENAI_ENDPOINT=https://localhost
+AZURE_OPENAI_API_KEY=dummy
 ```
 
-**Start the backend** (create `backend/.env` with `SA_PASSWORD`, `JWT_SECRET`, `AZURE_*` vars first):
+### 2. Start the database
+
+Both scripts load variables from `backend/.env` automatically and forward all arguments to `docker compose`.
+
+**macOS / Linux / Git Bash:**
+```bash
+./local/dev-db.sh up -d
+./local/dev-db.sh down
+./local/dev-db.sh logs -f db
+```
+
+**Windows (cmd.exe):**
+```cmd
+local\dev-db.cmd up -d
+local\dev-db.cmd down
+local\dev-db.cmd logs -f db
+```
+
+### 3. Start the backend
+
 ```bash
 cd backend && ./gradlew runWithVars
 ```
 
-**Start the frontend:**
+### 4. Start the frontend
+
 ```bash
 cd frontend && npm run dev
 ```
