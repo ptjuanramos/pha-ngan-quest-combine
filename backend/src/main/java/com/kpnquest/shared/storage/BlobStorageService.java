@@ -15,30 +15,43 @@ import java.time.OffsetDateTime;
 @Singleton
 public class BlobStorageService {
 
-    private final BlobContainerClient containerClient;
+    private final String connectionString;
+    private final String containerName;
+    private volatile BlobContainerClient containerClient;
 
     public BlobStorageService(
         @Value("${azure.storage.connection-string}") String connectionString,
         @Value("${azure.storage.container-name:photos}") String containerName
     ) {
-        BlobServiceClient serviceClient = new BlobServiceClientBuilder()
-            .connectionString(connectionString)
-            .buildClient();
+        this.connectionString = connectionString;
+        this.containerName = containerName;
+    }
 
-        this.containerClient = serviceClient.getBlobContainerClient(containerName);
+    private BlobContainerClient client() {
+        if (containerClient == null) {
+            synchronized (this) {
+                if (containerClient == null) {
+                    BlobServiceClient serviceClient = new BlobServiceClientBuilder()
+                        .connectionString(connectionString)
+                        .buildClient();
+                    containerClient = serviceClient.getBlobContainerClient(containerName);
+                }
+            }
+        }
+        return containerClient;
     }
 
     public record SasResult(String token, LocalDateTime expiresAt) {}
 
     public String upload(String blobPath, byte[] bytes) {
-        containerClient.getBlobClient(blobPath)
+        client().getBlobClient(blobPath)
             .upload(new ByteArrayInputStream(bytes), bytes.length, true);
         return blobPath;
     }
 
     public void deleteAllContainersFiles() {
-         containerClient.listBlobs().forEach(blob ->
-                 containerClient.getBlobClient(blob.getName())
+        client().listBlobs().forEach(blob ->
+                client().getBlobClient(blob.getName())
                          .delete());
     }
 
@@ -47,11 +60,11 @@ public class BlobStorageService {
         BlobServiceSasSignatureValues values = new BlobServiceSasSignatureValues(
             expiry, new BlobSasPermission().setReadPermission(true)
         );
-        String token = containerClient.getBlobClient(blobPath).generateSas(values);
+        String token = client().getBlobClient(blobPath).generateSas(values);
         return new SasResult(token, expiry.toLocalDateTime());
     }
 
     public String buildUrl(String blobPath, String sasToken) {
-        return containerClient.getBlobClient(blobPath).getBlobUrl() + "?" + sasToken;
+        return client().getBlobClient(blobPath).getBlobUrl() + "?" + sasToken;
     }
 }
