@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "infra/**"
+      - "!**/*.md"
   workflow_dispatch:
     inputs:
       action:

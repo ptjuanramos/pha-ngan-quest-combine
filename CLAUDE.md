@@ -5,13 +5,13 @@ The app is designed for one player and should guide them through 8 missions over
 
 ## Repository Structure
 
-This is a **monorepo** with two top-level directories:
-- `frontend/` — the React app (the only active codebase; `backend/` is currently empty)
-- `.docs/troubleshoot/` — local troubleshooting notes (Windows/WSL2/Docker issues)
+- `frontend/` — React app (git submodule)
+- `backend/` — Micronaut 4 Java backend
+- `infra/` — Terraform infrastructure (Azure)
+- `local/` — Docker Compose for local development (MSSQL only)
+- `.github/workflows/` — CI/CD pipelines
 
-All frontend work happens inside `frontend/`. Run every command from there.
-
-## Tech stack ( `frontend/`)
+## Tech stack (`frontend/`)
 - React JS version 18
 - Typescript (strict mode)
 
@@ -22,12 +22,11 @@ Do NOT introduce:
 ## Commands (run from `backend/`)
 
 ```bash
-./gradlew bootRun        # Start backend (port 8081)
-./gradlew test           # Run all integration tests (requires Docker)
-./gradlew test --tests "com.kpnquest.identifyplayer.*"  # Run a single slice's tests
-./gradlew shadowJar      # Build fat JAR → build/libs/*-all.jar
+./gradlew runWithVars    # Start backend (port 8080, reads .env for secrets)
 ```
 
+> **Local database:** start MSSQL first with `docker compose up -d` from `local/`.
+>
 > **Windows first run:** create `~/.testcontainers.properties` with `testcontainers.reuse.enable=true`
 > so the MSSQL container is reused between test runs instead of restarting each time.
 
@@ -35,20 +34,11 @@ Do NOT introduce:
 
 ```bash
 npm run dev        # Start dev server at http://localhost:8080
-npm run build      # Production build
-npm run lint       # ESLint
-npm test           # Run Vitest unit tests (single run)
-npm run test:watch # Vitest in watch mode
-```
-
-To run a single test file:
-```bash
-npx vitest run src/path/to/file.test.ts
 ```
 
 ## Backend architecture
 
-**Stack:** Micronaut 4.x · Java 21 (virtual threads) · Micronaut Data JDBC · MSSQL · Flyway · Gradle (Groovy DSL)
+**Stack:** Micronaut 4.x · Java 21 · Micronaut Data JDBC · MSSQL · Gradle (Groovy DSL)
 
 ### Package layout — vertical feature slices
 
@@ -62,17 +52,42 @@ npx vitest run src/path/to/file.test.ts
 | `uploadphoto` | `POST /api/v1/missions/{id}/photos` — upsert base64 photo |
 | `syncgamestate` | `GET/PUT /api/v1/players/{id}/state` — sync localStorage state to DB |
 
-### Security
-
-All endpoints except `/api/v1/players/identify` require a Bearer JWT. The JWT subject (`getName()`) is the player's numeric ID as a string. Services extract it via `Long.valueOf(authentication.getName())`.
-
 ### Database
 
-Flyway migrations in `src/main/resources/db/migration/`. Naming: `V{n}__{description}.sql`. All user-facing text columns use `NVARCHAR`; timestamps use `DATETIME2`. Domain entities are Java records annotated with `@MappedEntity` (Micronaut Data JDBC requires it).
+Flyway migrations live in `src/main/resources/db/migration/`. Naming: `V{n}__{description}.sql`. All user-facing text columns use `NVARCHAR`; timestamps use `DATETIME2`. Domain entities are Java records annotated with `@MappedEntity`.
 
-### Tests
+Flyway migrations in `application.yml` (production). For local development it can be re-enabled in `application-dev.yml`.
 
-Integration tests only — no mocks, no H2. All ITs extend `MssqlContainerExtension` (shared static container with `withReuse(true)`) and implement `TestPropertyProvider` to inject the Testcontainers JDBC URL. Run with `@MicronautTest(transactional = false)` since tests exercise the HTTP layer. `testcontainers.properties` in test resources forces the named-pipe Docker strategy for Windows/Docker Desktop.
+### Azure integrations
+
+- **Blob Storage** (`shared/storage/BlobStorageService`): client initialized lazily on first use
+- **OpenAI** (`shared/ai/AiPhotoValidationService`): client initialized lazily on first use
+
+## Deployment
+
+### Infrastructure (Terraform — `infra/`)
+
+All Azure resources are managed by Terraform.
+
+Key resources:
+- **Azure Container Apps** (`ca-kpnquest`) — runs the backend Docker image; 1 replica always on
+- **Azure Container Registry** (`acrkpnquest`) — stores Docker images
+- **Azure SQL** (`sql-kpnquest`) — Basic tier MSSQL database
+- **Azure Blob Storage** — photos container (uses existing storage account)
+- **Azure OpenAI** (`oai-kpnquest`) — `gpt-4o-mini` deployment in Switzerland North
+
+### Application (`deploy-application.yml`)
+
+Triggered on push to `main` when `backend/**` or `frontend/**` changes:
+1. **Test** — runs integration tests against a Testcontainers MSSQL instance
+2. **Build** — `./gradlew shadowJar` produces `build/libs/app.jar` (fat JAR with bundled frontend)
+3. **Deploy** — builds Docker image, pushes to ACR, updates the Container App to the new image
+
+The app URL is the Container App's FQDN — find it via:
+```bash
+az containerapp show --name ca-kpnquest --resource-group rg-kpnquest \
+  --query "properties.configuration.ingress.fqdn" -o tsv
+```
 
 ## Frontend architecture
 
