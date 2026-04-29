@@ -92,14 +92,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get App Service name
-        id: get-app-name
-        run: |
-          APP_NAME=$(az webapp list --resource-group rg-kpnquest --query "[0].name" -o tsv)
-          echo "name=$APP_NAME" >> $GITHUB_OUTPUT
+#      - name: Get App Service name
+#        id: get-app-name
+#        run: |
+#          APP_NAME=$(az webapp list --resource-group rg-kpnquest --query "[0].name" -o tsv)
+#          echo "name=$APP_NAME" >> $GITHUB_OUTPUT
 
       - name: Deploy to App Service
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ steps.get-app-name.outputs.name }}
+          app-name: test-juan-kpn
           package: artifact/*.jar
