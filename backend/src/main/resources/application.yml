@@ -18,7 +18,7 @@ micronaut:
         paths: classpath:public
         mapping: /**
   server:
-    port: 8081
+    port: 8080
   executors:
     io:
       type: cached

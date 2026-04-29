@@ -1,6 +1,20 @@
 plugins {
     id 'io.micronaut.application' version '4.6.2'
     id 'com.gradleup.shadow' version '8.3.5'
+    id 'com.microsoft.azure.azurewebapp' version '1.3.0'
+}
+
+azurewebapp {
+    subscription = 'e06c7735-83b1-4684-b0fd-911ae7978abf'
+    resourceGroup = 'rg-kpnquest'
+    appName = 'app-kpnquest'
+    region = 'Switzerland North'
+    pricingTier = 'B1'
+    runtime {
+        os = 'Linux'
+        javaVersion = 'Java 21'
+        webContainer = 'Java SE' // for fat JARs
+    }
 }
 
 version = '0.1'
