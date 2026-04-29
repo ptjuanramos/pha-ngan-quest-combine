@@ -73,59 +73,127 @@ resource "azurerm_cognitive_deployment" "gpt4o_mini" {
   }
 }
 
-resource "azurerm_service_plan" "main" {
-  name                = "asp-kpnquest"
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "log-kpnquest"
   resource_group_name = data.azurerm_resource_group.main.name
   location            = "switzerlandnorth"
-  os_type             = "Linux"
-  sku_name            = var.app_service_sku
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
   tags                = local.tags
 }
 
-resource "azurerm_linux_web_app" "main" {
-  name                = "app-kpnquest"
+resource "azurerm_container_registry" "main" {
+  name                = "acrkpnquest"
   resource_group_name = data.azurerm_resource_group.main.name
-  location            = "switzerlandnorth"
-  service_plan_id     = azurerm_service_plan.main.id
+  location            = data.azurerm_resource_group.main.location
+  sku                 = "Basic"
+  admin_enabled       = true
   tags                = local.tags
+}
 
-  site_config {
-    always_on = true
+resource "azurerm_container_app_environment" "main" {
+  name                       = "cae-kpnquest"
+  resource_group_name        = data.azurerm_resource_group.main.name
+  location                   = "switzerlandnorth"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+  tags                       = local.tags
+}
 
-    application_stack {
-      java_version        = "21"
-      java_server         = "JAVA"
-      java_server_version = "21"
+resource "azurerm_container_app" "main" {
+  name                         = "ca-kpnquest"
+  resource_group_name          = data.azurerm_resource_group.main.name
+  container_app_environment_id = azurerm_container_app_environment.main.id
+  revision_mode                = "Single"
+  tags                         = local.tags
+
+  registry {
+    server               = azurerm_container_registry.main.login_server
+    username             = azurerm_container_registry.main.admin_username
+    password_secret_name = "acr-password"
+  }
+
+  secret {
+    name  = "acr-password"
+    value = azurerm_container_registry.main.admin_password
+  }
+  secret {
+    name  = "db-password"
+    value = var.sql_admin_password
+  }
+  secret {
+    name  = "jwt-secret"
+    value = var.jwt_secret
+  }
+  secret {
+    name  = "storage-connection-string"
+    value = data.azurerm_storage_account.main.primary_connection_string
+  }
+  secret {
+    name  = "openai-key"
+    value = azurerm_cognitive_account.openai.primary_access_key
+  }
+
+  ingress {
+    external_enabled = true
+    target_port      = 8080
+    traffic_weight {
+      latest_revision = true
+      percentage      = 100
     }
   }
 
-  logs {
-    application_logs {
-      file_system_level = "Information"
-    }
-    http_logs {
-      file_system {
-        retention_in_mb   = 35
-        retention_in_days = 7
+  template {
+    min_replicas = 1
+    max_replicas = 1
+
+    container {
+      name   = "app"
+      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+      cpu    = 0.5
+      memory = "1Gi"
+
+      env {
+        name  = "DATASOURCES_DEFAULT_URL"
+        value = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
+      }
+      env {
+        name  = "DATASOURCES_DEFAULT_USERNAME"
+        value = var.sql_admin_username
+      }
+      env {
+        name        = "DATASOURCES_DEFAULT_PASSWORD"
+        secret_name = "db-password"
+      }
+      env {
+        name        = "SA_PASSWORD"
+        secret_name = "db-password"
+      }
+      env {
+        name        = "AZURE_STORAGE_CONNECTION_STRING"
+        secret_name = "storage-connection-string"
+      }
+      env {
+        name  = "AZURE_OPENAI_ENDPOINT"
+        value = azurerm_cognitive_account.openai.endpoint
+      }
+      env {
+        name        = "AZURE_OPENAI_API_KEY"
+        secret_name = "openai-key"
+      }
+      env {
+        name        = "JWT_SECRET"
+        secret_name = "jwt-secret"
+      }
+      env {
+        name  = "MICRONAUT_ENVIRONMENTS"
+        value = "prod"
       }
     }
   }
 
-  app_settings = {
-    "DATASOURCES_DEFAULT_URL"      = "jdbc:sqlserver://${azurerm_mssql_server.main.fully_qualified_domain_name}:1433;database=kpnquest;encrypt=true;trustServerCertificate=false;loginTimeout=30"
-    "DATASOURCES_DEFAULT_USERNAME" = var.sql_admin_username
-    "DATASOURCES_DEFAULT_PASSWORD" = var.sql_admin_password
-    "SA_PASSWORD"                  = var.sql_admin_password
-
-    "AZURE_STORAGE_CONNECTION_STRING" = data.azurerm_storage_account.main.primary_connection_string
-
-    "AZURE_OPENAI_ENDPOINT" = azurerm_cognitive_account.openai.endpoint
-    "AZURE_OPENAI_API_KEY"  = azurerm_cognitive_account.openai.primary_access_key
-
-    "JWT_SECRET" = var.jwt_secret
-
-    "WEBSITES_PORT"                       = "8080"
-    "WEBSITES_CONTAINER_START_TIME_LIMIT" = "600"
-    "MICRONAUT_ENVIRONMENTS"              = "prod"
+  lifecycle {
+    ignore_changes = [
+      template[0].container[0].image,
+    ]
   }
 }
